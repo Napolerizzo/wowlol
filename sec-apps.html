@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Secretariat Applications · Mosaic MUN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Condiment&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#010828;--cream:#EFF4FF;--neon:#6FFF00;--gold:#FFD700;--purple:#b724ff;--red:#ff3b5c;--cyan:#00e5ff}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--cream);font-family:'Courier New',monospace;overflow-x:hidden;cursor:none;min-height:100vh}
+
+    /* ── CANVASES ── */
+    #nebula-canvas,#stars-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+    #nebula-canvas{z-index:0}
+    #stars-canvas{z-index:1}
+    .scanlines{position:fixed;inset:0;z-index:3;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px)}
+    .vignette{position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse at center,transparent 35%,rgba(0,5,20,0.85) 100%)}
+
+    /* ── CURSOR ── */
+    #cursor{position:fixed;width:10px;height:10px;background:var(--neon);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:screen;box-shadow:0 0 12px var(--neon),0 0 30px rgba(111,255,0,.4)}
+    #cursor-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(111,255,0,.5);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .2s,height .2s,border-color .2s}
+    .cursor-trail{position:fixed;border-radius:50%;pointer-events:none;z-index:9997;background:var(--neon);transform:translate(-50%,-50%);mix-blend-mode:screen}
+
+    /* ── GLASS ── */
+    .lg{background:rgba(255,255,255,.04);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);position:relative;overflow:hidden}
+    .lg::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(160deg,rgba(255,255,255,.25) 0%,rgba(255,255,255,0) 50%,rgba(255,255,255,.08) 100%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+
+    /* ── LAYOUT ── */
+    .z{position:relative;z-index:10}
+    .wrap{max-width:960px;margin:0 auto;padding:0 28px 120px}
+    @media(min-width:768px){.wrap{padding:0 52px 120px}}
+
+    /* ── NAV ── */
+    .navbar{display:flex;align-items:center;justify-content:space-between;padding:28px 0 0}
+    .logo{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;text-transform:uppercase;color:var(--cream);letter-spacing:.14em;text-decoration:none}
+    .logo em{color:var(--neon);font-style:normal}
+    .back-btn{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;color:rgba(239,244,255,.5);display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:20px;transition:color .2s,background .2s}
+    .back-btn:hover{color:var(--neon);background:rgba(111,255,0,.06)}
+
+    /* ── HERO HEADER ── */
+    .app-hero{padding:80px 0 56px;position:relative}
+    .eyebrow{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:400;letter-spacing:.35em;text-transform:uppercase;color:var(--neon);margin-bottom:24px;animation:neon-glow 3s ease-in-out infinite}
+    @keyframes neon-glow{0%,100%{text-shadow:0 0 8px rgba(111,255,0,.5)}50%{text-shadow:0 0 22px rgba(111,255,0,1),0 0 50px rgba(111,255,0,.4)}}
+    .app-h1{font-family:'Anton',sans-serif;font-size:clamp(44px,7vw,100px);text-transform:uppercase;line-height:.92;color:var(--cream)}
+    .app-h1 .acc{display:block;font-family:'Condiment',cursive;font-size:clamp(30px,4.5vw,68px);color:var(--neon);transform:rotate(-1.5deg);text-shadow:0 0 24px rgba(111,255,0,.6);line-height:1.15;margin-top:4px}
+    .app-sub{font-family:'Orbitron',sans-serif;font-size:clamp(10px,1.2vw,13px);font-weight:400;letter-spacing:.16em;color:rgba(239,244,255,.45);margin-top:20px;max-width:520px;line-height:1.8}
+
+    /* hero reveal */
+    .h-reveal{opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1)}
+    .h-reveal.in{opacity:1;transform:translateY(0)}
+
+    /* ── GUIDELINES ── */
+    .guidelines{border-radius:20px;padding:28px 32px;margin-bottom:52px;border-left:2px solid var(--neon);background:rgba(111,255,0,.025)}
+    .gl-label{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:.35em;text-transform:uppercase;color:var(--neon);opacity:.75;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+    .gl-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(111,255,0,.3),transparent)}
+    .gl-list{list-style:none;display:flex;flex-direction:column;gap:9px}
+    .gl-list li{font-size:clamp(11px,1.1vw,13px);color:rgba(239,244,255,.65);line-height:1.7;padding-left:20px;position:relative}
+    .gl-list li::before{content:'▸';position:absolute;left:0;color:var(--neon);font-size:10px;top:2px}
+
+    /* ── FORM SECTIONS ── */
+    .fsec{margin-bottom:48px}
+    .fsec-label{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:.35em;text-transform:uppercase;color:var(--gold);margin-bottom:24px;display:flex;align-items:center;gap:12px}
+    .fsec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,215,0,.25),transparent)}
+
+    /* ── GRID ── */
+    .fgrid{display:grid;grid-template-columns:1fr;gap:18px}
+    @media(min-width:640px){.fgrid{grid-template-columns:1fr 1fr}}
+    .full{grid-column:1/-1}
+
+    /* ── FIELD ── */
+    .field{display:flex;flex-direction:column;gap:7px}
+    .flabel{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(239,244,255,.4);display:flex;align-items:center;gap:5px}
+    .req{color:var(--red);font-size:12px;line-height:1}
+    .opt-tag{font-size:8px;letter-spacing:.1em;color:rgba(239,244,255,.25);border:1px solid rgba(255,255,255,.1);padding:2px 7px;border-radius:10px}
+
+    input[type=text],input[type=email],input[type=tel],textarea,select{
+      width:100%;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);
+      border-radius:12px;padding:14px 18px;font-family:'Courier New',monospace;font-size:13px;
+      color:var(--cream);outline:none;transition:border-color .2s,background .2s,box-shadow .2s;-webkit-appearance:none;
+    }
+    input::placeholder,textarea::placeholder{color:rgba(239,244,255,.18)}
+    input:focus,textarea:focus,select:focus{border-color:var(--neon);background:rgba(111,255,0,.03);box-shadow:0 0 0 3px rgba(111,255,0,.07),0 0 20px rgba(111,255,0,.08)}
+    input.err,textarea.err,select.err{border-color:var(--red)!important;box-shadow:0 0 0 3px rgba(255,59,92,.1)!important}
+    select option{background:#010828;color:var(--cream)}
+    textarea{resize:vertical;min-height:110px;line-height:1.7}
+
+    /* ── PILL RADIO ── */
+    .pill-group{display:flex;flex-wrap:wrap;gap:8px}
+    .pill{position:relative}
+    .pill input{position:absolute;opacity:0;width:0;height:0}
+    .pill label{display:block;padding:8px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.1);font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(239,244,255,.4);cursor:none;transition:all .2s}
+    .pill input:checked+label{background:rgba(111,255,0,.08);border-color:var(--neon);color:var(--neon);box-shadow:0 0 14px rgba(111,255,0,.14)}
+    .pill label:hover{border-color:rgba(111,255,0,.35);color:rgba(239,244,255,.8)}
+
+    /* ── FILE DROP ── */
+    .file-drop{border:1.5px dashed rgba(255,255,255,.12);border-radius:16px;padding:28px 24px;text-align:center;cursor:none;transition:border-color .2s,background .2s;position:relative;overflow:hidden}
+    .file-drop:hover,.file-drop.over{border-color:var(--neon);background:rgba(111,255,0,.03)}
+    .file-drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:none}
+    .fd-icon{width:44px;height:44px;margin:0 auto 12px;background:rgba(111,255,0,.08);border-radius:12px;display:flex;align-items:center;justify-content:center}
+    .fd-title{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(239,244,255,.7);margin-bottom:6px}
+    .fd-hint{font-size:11px;color:rgba(239,244,255,.28)}
+    .fd-name{margin-top:8px;font-size:11px;color:var(--neon);font-family:'Orbitron',sans-serif;letter-spacing:.1em}
+
+    /* ── SUBMIT ── */
+    .submit-area{margin-top:52px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px}
+    .submit-btn{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;letter-spacing:.25em;text-transform:uppercase;color:#000;background:var(--neon);padding:18px 68px;border-radius:40px;border:none;cursor:none;position:relative;overflow:hidden;transition:transform .2s;animation:btn-glow 4s ease-in-out infinite}
+    @keyframes btn-glow{0%,100%{box-shadow:0 0 24px rgba(111,255,0,.45),0 0 60px rgba(111,255,0,.15)}50%{box-shadow:0 0 40px rgba(111,255,0,.8),0 0 90px rgba(111,255,0,.35)}}
+    .submit-btn::before{content:'';position:absolute;top:-50%;left:-60%;width:40%;height:200%;background:rgba(255,255,255,.3);transform:skewX(-15deg);transition:left .5s}
+    .submit-btn:hover{transform:scale(1.04)}
+    .submit-btn:hover::before{left:130%}
+    .submit-note{font-size:11px;color:rgba(239,244,255,.22);font-family:'Courier New',monospace}
+    .submit-note span{color:var(--red)}
+
+    /* ── SUCCESS OVERLAY ── */
+    .success{display:none;position:fixed;inset:0;z-index:200;background:rgba(1,8,40,.97);backdrop-filter:blur(16px);align-items:center;justify-content:center;flex-direction:column;text-align:center;gap:24px;padding:48px}
+    .success.show{display:flex}
+    .success-ring{width:88px;height:88px;border-radius:50%;border:2px solid var(--neon);display:flex;align-items:center;justify-content:center;animation:neon-glow 2s ease-in-out infinite;position:relative}
+    .success-ring::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:1px solid rgba(111,255,0,.2);animation:expand-ring 2s ease-out infinite}
+    @keyframes expand-ring{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.6);opacity:0}}
+    .success-h{font-family:'Anton',sans-serif;font-size:clamp(38px,6vw,72px);text-transform:uppercase;line-height:.95}
+    .success-h .acc{display:block;font-family:'Condiment',cursive;font-size:clamp(28px,4vw,56px);color:var(--neon);text-shadow:0 0 20px rgba(111,255,0,.5)}
+    .success-p{font-size:14px;color:rgba(239,244,255,.55);max-width:400px;line-height:1.8}
+    .success-back{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;color:#000;background:var(--neon);padding:14px 36px;border-radius:30px;transition:transform .2s;animation:btn-glow 4s ease-in-out infinite}
+    .success-back:hover{transform:scale(1.04)}
+
+    /* ── TWEAKS ── */
+    #tweaks-panel{display:none;position:fixed;bottom:24px;right:24px;z-index:9990;background:rgba(1,8,40,.96);border:1px solid rgba(111,255,0,.2);border-radius:16px;padding:20px 22px;width:260px;backdrop-filter:blur(14px);font-size:12px}
+    #tweaks-panel h3{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.15em;margin-bottom:14px;color:var(--neon);text-transform:uppercase}
+    .tr{margin-bottom:12px}
+    .tr label{display:block;margin-bottom:4px;opacity:.5;text-transform:uppercase;font-size:9px;letter-spacing:.15em}
+    .tr input[type=range]{width:100%;accent-color:var(--neon)}
+  </style>
+</head>
+<body>
+
+<canvas id="nebula-canvas"></canvas>
+<canvas id="stars-canvas"></canvas>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- Success -->
+<div class="success" id="success">
+  <div class="success-ring">
+    <svg width="36" height="36" fill="none" stroke="#6FFF00" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <h2 class="success-h">
+    Transmission<br>
+    <span class="acc">Received.</span>
+  </h2>
+  <p class="success-p">Your application has been logged. The Secretariat will review all submissions and contact you within 7 days. Standards are non-negotiable.</p>
+  <a href="index.html" class="success-back">← Return to Base</a>
+</div>
+
+<!-- Tweaks -->
+<div id="tweaks-panel">
+  <h3>Tweaks</h3>
+  <div class="tr"><label>Star Speed</label><input type="range" min=".2" max="4" step=".1" value="1" oninput="warpTarget=parseFloat(this.value)"/></div>
+  <div class="tr"><label>Star Count</label><input type="range" min="100" max="800" step="50" value="500" oninput="resetStars(parseInt(this.value))"/></div>
+</div>
+
+<!-- PAGE -->
+<div class="z wrap">
+
+  <!-- Nav -->
+  <nav class="navbar">
+    <a href="index.html" class="logo">Mosaic <em>MUN</em></a>
+    <a href="index.html" class="back-btn lg" style="border-radius:20px">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back to Home
+    </a>
+  </nav>
+
+  <!-- Hero -->
+  <div class="app-hero">
+    <p class="eyebrow h-reveal" id="ev-eyebrow">▸ Mosaic MUN 2.0 · Secretariat Recruitment · Faridabad</p>
+    <h1 class="app-h1 h-reveal" id="ev-h1" style="transition-delay:.12s">
+      Join the<br>Secretariat.
+      <span class="acc">Lead the Stage.</span>
+    </h1>
+    <p class="app-sub h-reveal" id="ev-sub" style="transition-delay:.28s">
+      The Secretariat is the engine of Mosaic MUN. We're looking for students who lead with clarity, execute with precision, and hold themselves to a standard that most won't even attempt.
+    </p>
+  </div>
+
+  <!-- Guidelines -->
+  <div class="guidelines lg h-reveal" id="ev-gl" style="transition-delay:.42s">
+    <p class="gl-label">Before You Apply</p>
+    <ul class="gl-list">
+      <li>All applicants must be currently enrolled in school — Classes 9–12 preferred for leadership roles.</li>
+      <li>Secretariat members must attend all pre-conference preparation sessions without exception.</li>
+      <li>Commitment is non-negotiable. Dropping out post-selection disrupts the entire team and conference.</li>
+      <li>Selected members will be officially credited as Mosaic MUN Secretariat, organised by Duer.in.</li>
+      <li>Applications close when positions are filled. Early applicants receive priority review.</li>
+      <li>Fields marked <span style="color:var(--red)">*</span> are mandatory. MUN CV is optional but strongly recommended.</li>
+    </ul>
+  </div>
+
+  <!-- FORM -->
+  <form id="app-form" novalidate>
+
+    <!-- 01 Personal -->
+    <div class="fsec">
+      <p class="fsec-label">01 · Personal Details</p>
+      <div class="fgrid">
+        <div class="field">
+          <label class="flabel">Full Name <span class="req">*</span></label>
+          <input type="text" name="fullName" placeholder="As on school ID" required/>
+        </div>
+        <div class="field">
+          <label class="flabel">Email Address <span class="req">*</span></label>
+          <input type="email" name="email" placeholder="you@school.edu" required/>
+        </div>
+        <div class="field">
+          <label class="flabel">WhatsApp Number <span class="req">*</span></label>
+          <input type="tel" name="phone" placeholder="+91 XXXXX XXXXX" required/>
+        </div>
+        <div class="field">
+          <label class="flabel">School / Institution <span class="req">*</span></label>
+          <input type="text" name="school" placeholder="Full school name" required/>
+        </div>
+        <div class="field">
+          <label class="flabel">Class / Grade <span class="req">*</span></label>
+          <select name="grade" required>
+            <option value="" disabled selected>Select class</option>
+            <option>Class 8</option><option>Class 9</option><option>Class 10</option>
+            <option>Class 11</option><option>Class 12</option><option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="flabel">City <span class="req">*</span></label>
+          <input type="text" name="city" placeholder="Your city" required/>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 MUN Background -->
+    <div class="fsec">
+      <p class="fsec-label">02 · MUN Background</p>
+      <div class="fgrid">
+        <div class="field full">
+          <label class="flabel">Past MUN Experience <span class="req">*</span></label>
+          <textarea name="munExp" placeholder="List conferences attended, roles held (delegate, chair, EB, etc.), and any awards. If none, write 'No prior experience'." required></textarea>
+        </div>
+        <div class="field full">
+          <label class="flabel">Have you been part of a Secretariat before? <span class="req">*</span></label>
+          <div class="pill-group">
+            <div class="pill"><input type="radio" name="prevSec" id="ps1" value="Yes" required/><label for="ps1">Yes</label></div>
+            <div class="pill"><input type="radio" name="prevSec" id="ps2" value="No"/><label for="ps2">No</label></div>
+            <div class="pill"><input type="radio" name="prevSec" id="ps3" value="Partially"/><label for="ps3">Partially</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 Application -->
+    <div class="fsec">
+      <p class="fsec-label">03 · Your Application</p>
+      <div class="fgrid">
+        <div class="field full">
+          <label class="flabel">Preferred Department <span class="req">*</span></label>
+          <div class="pill-group">
+            <div class="pill"><input type="radio" name="dept" id="d1" value="Secretary-General" required/><label for="d1">Secretary-General</label></div>
+            <div class="pill"><input type="radio" name="dept" id="d2" value="Director-General"/><label for="d2">Director-General</label></div>
+            <div class="pill"><input type="radio" name="dept" id="d3" value="USG Committees"/><label for="d3">USG – Committees</label></div>
+            <div class="pill"><input type="radio" name="dept" id="d4" value="USG Logistics"/><label for="d4">USG – Logistics</label></div>
+            <div class="pill"><input type="radio" name="dept" id="d5" value="USG Operations"/><label for="d5">USG – Operations</label></div>
+            <div class="pill"><input type="radio" name="dept" id="d6" value="Press Corps"/><label for="d6">Press Corps</label></div>
+            <div class="pill"><input type="radio" name="dept" id="d7" value="Tech & Design"/><label for="d7">Tech & Design</label></div>
+            <div class="pill"><input type="radio" name="dept" id="d8" value="Open to Any"/><label for="d8">Open to Any</label></div>
+          </div>
+        </div>
+        <div class="field full">
+          <label class="flabel">Why do you want to join the Secretariat? <span class="req">*</span></label>
+          <textarea name="whyJoin" placeholder="Be specific. What do you bring? What do you want to build? Don't be generic." required style="min-height:130px"></textarea>
+        </div>
+        <div class="field full">
+          <label class="flabel">What does a great MUN look like to you? <span class="req">*</span></label>
+          <textarea name="vision" placeholder="Your vision for Mosaic MUN 2.0 as a Secretariat member." required></textarea>
+        </div>
+        <div class="field">
+          <label class="flabel">How did you hear about us? <span class="req">*</span></label>
+          <select name="source" required>
+            <option value="" disabled selected>Select one</option>
+            <option>Instagram</option>
+            <option>Friend / Peer</option>
+            <option>School teacher or counselor</option>
+            <option>Past Mosaic MUN participant</option>
+            <option>Duer.in website</option>
+            <option>WhatsApp group</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="flabel">Availability <span class="req">*</span></label>
+          <select name="availability" required>
+            <option value="" disabled selected>Select</option>
+            <option>Fully available — weekdays + weekends</option>
+            <option>Available weekends only</option>
+            <option>Limited — will communicate schedule</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 04 MUN CV -->
+    <div class="fsec">
+      <p class="fsec-label">04 · MUN CV <span style="color:rgba(239,244,255,.28);font-size:8px;letter-spacing:.1em;font-weight:400">OPTIONAL</span></p>
+      <div class="field">
+        <label class="flabel">Upload your MUN CV <span class="opt-tag">Optional · PDF or DOCX · max 5MB</span></label>
+        <div class="file-drop" id="file-drop">
+          <input type="file" name="munCV" accept=".pdf,.doc,.docx" id="cv-input" onchange="handleFile(this)"/>
+          <div class="fd-icon">
+            <svg width="22" height="22" fill="none" stroke="#6FFF00" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <p class="fd-title">Drop your MUN CV here</p>
+          <p class="fd-hint">or click to browse · PDF / DOCX · max 5MB</p>
+          <p class="fd-name" id="fd-name"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="submit-area">
+      <button type="submit" class="submit-btn">Transmit Application →</button>
+      <p class="submit-note">Fields marked <span>*</span> are mandatory. MUN CV upload is optional.</p>
+    </div>
+  </form>
+</div>
+
+<script>
+/* ── NEBULA ── */
+const nc=document.getElementById('nebula-canvas'),nctx=nc.getContext('2d');
+let NW,NH;
+function resizeN(){NW=nc.width=window.innerWidth;NH=nc.height=window.innerHeight}
+const clouds=[
+  {x:.15,y:.3,r:.55,c1:[30,0,80],c2:[10,0,40],spd:.00007,ph:0},
+  {x:.8,y:.55,r:.4,c1:[0,40,10],c2:[0,20,5],spd:.00011,ph:2},
+  {x:.45,y:.88,r:.38,c1:[60,10,100],c2:[20,0,50],spd:.00009,ph:4},
+  {x:.1,y:.72,r:.28,c1:[0,50,100],c2:[0,20,60],spd:.00013,ph:1},
+];
+function drawNebula(t){
+  nctx.clearRect(0,0,NW,NH);
+  clouds.forEach(c=>{
+    const ox=Math.sin(t*c.spd*1000+c.ph)*.06,oy=Math.cos(t*c.spd*1000+c.ph*1.3)*.05;
+    const cx=(c.x+ox)*NW,cy=(c.y+oy)*NH,r=c.r*Math.min(NW,NH);
+    const pulse=.9+.1*Math.sin(t*c.spd*3000+c.ph);
+    const g=nctx.createRadialGradient(cx,cy,0,cx,cy,r*pulse);
+    g.addColorStop(0,`rgba(${c.c1[0]},${c.c1[1]},${c.c1[2]},.16)`);
+    g.addColorStop(.5,`rgba(${Math.floor((c.c1[0]+c.c2[0])/2)},${Math.floor((c.c1[1]+c.c2[1])/2)},${Math.floor((c.c1[2]+c.c2[2])/2)},.06)`);
+    g.addColorStop(1,`rgba(${c.c2[0]},${c.c2[1]},${c.c2[2]},0)`);
+    nctx.fillStyle=g;nctx.beginPath();nctx.arc(cx,cy,r*pulse,0,Math.PI*2);nctx.fill();
+  });
+}
+
+/* ── 3D STARFIELD ── */
+const sc=document.getElementById('stars-canvas'),sctx=sc.getContext('2d');
+let SW,SH,warpSpeed=1,warpTarget=1;
+const FOCAL=500;
+let STAR_COUNT=500,stars=[];
+function resizeS(){SW=sc.width=window.innerWidth;SH=sc.height=window.innerHeight}
+function makeS(){return{x:(Math.random()-.5)*2000,y:(Math.random()-.5)*2000,z:Math.random()*1500+100,pz:0,col:Math.random()>.9?[111,255,0]:Math.random()>.8?[183,36,255]:Math.random()>.7?[0,200,255]:[255,255,255],size:.4+Math.random()*1.2}}
+function resetStars(n){STAR_COUNT=n||STAR_COUNT;stars=Array.from({length:STAR_COUNT},makeS);stars.forEach(s=>s.pz=s.z)}
+resetStars();
+function drawStars(){
+  warpSpeed+=(warpTarget-warpSpeed)*.05;
+  sctx.fillStyle='rgba(1,8,40,.18)';sctx.fillRect(0,0,SW,SH);
+  const cx=SW/2,cy=SH/2,spd=4*warpSpeed;
+  stars.forEach((s,i)=>{
+    s.pz=s.z;s.z-=spd;
+    if(s.z<=1){s.x=(Math.random()-.5)*2000;s.y=(Math.random()-.5)*2000;s.z=1500;s.pz=s.z;}
+    const sx=(s.x/s.z)*FOCAL+cx,sy=(s.y/s.z)*FOCAL+cy;
+    const px=(s.x/s.pz)*FOCAL+cx,py=(s.y/s.pz)*FOCAL+cy;
+    if(sx<-2||sx>SW+2||sy<-2||sy>SH+2)return;
+    const d=1-s.z/1500,a=Math.min(1,d*1.4+.05),w=Math.max(.4,s.size*d*2.5);
+    const [r,g,b]=s.col;
+    if(d*warpSpeed>.15){
+      const gr=sctx.createLinearGradient(px,py,sx,sy);
+      gr.addColorStop(0,`rgba(${r},${g},${b},0)`);gr.addColorStop(1,`rgba(${r},${g},${b},${a*.9})`);
+      sctx.beginPath();sctx.moveTo(px,py);sctx.lineTo(sx,sy);
+      sctx.strokeStyle=gr;sctx.lineWidth=w;sctx.stroke();
+    }
+    sctx.beginPath();sctx.arc(sx,sy,Math.max(.4,w*.6),0,Math.PI*2);
+    sctx.fillStyle=`rgba(${r},${g},${b},${a})`;sctx.fill();
+    if(d>.75){sctx.beginPath();sctx.arc(sx,sy,w*2.5,0,Math.PI*2);sctx.fillStyle=`rgba(${r},${g},${b},${a*.08})`;sctx.fill();}
+  });
+}
+
+/* ── MAIN LOOP ── */
+function loop(t){drawNebula(t);drawStars();requestAnimationFrame(loop)}
+window.addEventListener('resize',()=>{resizeN();resizeS()});
+resizeN();resizeS();requestAnimationFrame(loop);
+
+/* ── CURSOR ── */
+const cursor=document.getElementById('cursor'),cring=document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+const trails=[];
+for(let i=0;i<10;i++){const t=document.createElement('div');t.className='cursor-trail';t.style.cssText=`opacity:${(1-i/10)*.4};width:${(4-i*.3)}px;height:${(4-i*.3)}px`;document.body.appendChild(t);trails.push({el:t,x:0,y:0})}
+window.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+function animC(){
+  cursor.style.left=mx+'px';cursor.style.top=my+'px';
+  rx+=(mx-rx)*.1;ry+=(my-ry)*.1;
+  cring.style.left=rx+'px';cring.style.top=ry+'px';
+  let lx=mx,ly=my;
+  trails.forEach(t=>{t.x+=(lx-t.x)*.35;t.y+=(ly-t.y)*.35;t.el.style.left=t.x+'px';t.el.style.top=t.y+'px';lx=t.x;ly=t.y});
+  requestAnimationFrame(animC);
+}animC();
+document.querySelectorAll('a,button,.pill label,.file-drop').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cursor.style.width='18px';cursor.style.height='18px';cring.style.width='50px';cring.style.height='50px';cring.style.borderColor='rgba(111,255,0,.9)'});
+  el.addEventListener('mouseleave',()=>{cursor.style.width='10px';cursor.style.height='10px';cring.style.width='36px';cring.style.height='36px';cring.style.borderColor='rgba(111,255,0,.5)'});
+});
+
+/* ── TEXT SCRAMBLE ── */
+const CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&';
+function scramble(el,text,dur){
+  let start=null;
+  function step(ts){
+    if(!start)start=ts;
+    const p=Math.min((ts-start)/dur,1);
+    let out='';
+    for(let i=0;i<text.length;i++){
+      if(text[i]===' '||text[i]==='\n'){out+=text[i];continue;}
+      if(i/text.length<p)out+=text[i];
+      else out+=CHARS[Math.floor(Math.random()*CHARS.length)];
+    }
+    el.textContent=out;
+    if(p<1)requestAnimationFrame(step);else el.textContent=text;
+  }requestAnimationFrame(step);
+}
+
+/* ── HERO ENTRANCE ── */
+setTimeout(()=>{
+  document.getElementById('ev-eyebrow').classList.add('in');
+  setTimeout(()=>{
+    const h1=document.getElementById('ev-h1');
+    h1.classList.add('in');
+    h1.querySelector('.acc') && scramble(h1.querySelector('.acc'),'Lead the Stage.',900);
+  },200);
+  setTimeout(()=>document.getElementById('ev-sub').classList.add('in'),400);
+  setTimeout(()=>document.getElementById('ev-gl').classList.add('in'),580);
+},350);
+
+/* ── FILE DROP ── */
+function handleFile(input){
+  const f=input.files[0];
+  if(f){document.getElementById('fd-name').textContent='✓ '+f.name;document.getElementById('file-drop').style.borderColor='var(--neon)'}
+}
+const fd=document.getElementById('file-drop');
+['dragover','dragleave','drop'].forEach(ev=>fd.addEventListener(ev,e=>{
+  e.preventDefault();
+  fd.classList.toggle('over',ev==='dragover');
+  if(ev==='drop'&&e.dataTransfer.files[0]){document.getElementById('cv-input').files=e.dataTransfer.files;handleFile(document.getElementById('cv-input'))}
+}));
+
+/* ── FORM SUBMIT ── */
+document.getElementById('app-form').addEventListener('submit',function(e){
+  e.preventDefault();
+  let ok=true;
+  this.querySelectorAll('[required]').forEach(f=>{
+    if(f.type==='radio')return;
+    if(!f.value.trim()){f.classList.add('err');ok=false;f.addEventListener('input',()=>f.classList.remove('err'),{once:true})}
+  });
+  ['prevSec','dept'].forEach(name=>{if(!this.querySelector(`[name="${name}"]:checked`))ok=false});
+  if(!ok)return;
+  document.getElementById('success').classList.add('show');
+});
+
+/* ── TWEAKS ── */
+window.addEventListener('message',e=>{
+  if(e.data?.type==='__activate_edit_mode')document.getElementById('tweaks-panel').style.display='block';
+  if(e.data?.type==='__deactivate_edit_mode')document.getElementById('tweaks-panel').style.display='none';
+});
+window.parent.postMessage({type:'__edit_mode_available'},'*');
+</script>
+</body>
+</html>
